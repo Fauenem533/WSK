@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0f0f1a">
+<title>WSK Tracker - Wielki Szlem Komandosa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f0f1a;--card:#16213e;--accent:#e94560;--gold:#ffd700;--green:#00d68f;--text:#e8e8e8;--muted:#8899aa;--border:#1e3054;--hover:#1a2a4a}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-tap-highlight-color:transparent}
+#root{max-width:600px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+.header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--border)}
+.header h1{font-size:18px;font-weight:700;color:var(--gold)}
+.header h1 span{color:var(--accent)}
+.header-right{display:flex;align-items:center;gap:8px}
+.user-badge{font-size:12px;color:var(--green);font-weight:500}
+.icon-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:color .2s}
+.icon-btn:hover{color:var(--text)}
+.tabs{display:flex;background:var(--card);border-bottom:2px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border:none;background:none;color:var(--muted);cursor:pointer;font-size:10px;font-family:inherit;font-weight:500;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s;white-space:nowrap}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab svg{width:20px;height:20px}
+.content{flex:1;padding:12px;overflow-y:auto}
+.card{background:var(--card);border-radius:12px;padding:14px;margin-bottom:10px;border:1px solid var(--border)}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+input[type=text],input[type=email],input[type=password]{width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color .2s}
+input:focus{border-color:var(--accent)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;border-radius:8px;border:none;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-accent{background:var(--accent);color:#fff}
+.btn-accent:hover{opacity:.85}
+.btn-outline{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-outline.active{color:var(--accent);border-color:var(--accent);background:rgba(233,69,96,.1)}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:6px}
+.btn-gold{background:var(--gold);color:#000}
+.filter-row{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--muted);font-weight:500;padding:8px 6px;border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+td{padding:8px 6px;border-bottom:1px solid rgba(30,48,84,.4)}
+tr:hover td{background:rgba(30,48,84,.3)}
+.pagination{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:12px;padding:8px 0}
+.pagination .btn{min-width:36px}
+.page-info{color:var(--muted);font-size:13px}
+.badge{display:inline-block;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:600}
+.badge-done{background:rgba(0,214,143,.15);color:var(--green)}
+.badge-upcoming{background:rgba(255,215,0,.12);color:var(--gold)}
+.loader{display:flex;justify-content:center;padding:40px}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.error-msg{text-align:center;padding:20px;color:var(--accent);font-size:14px}
+.runner-item{display:flex;align-items:center;justify-content:space-between;padding:12px;cursor:pointer;border-radius:8px;transition:background .15s}
+.runner-item:hover{background:var(--hover)}
+.runner-name{font-weight:600;font-size:14px}
+.runner-meta{font-size:12px;color:var(--muted);margin-top:2px}
+.runner-races{font-size:12px;color:var(--gold);font-weight:600}
+.profile-header{text-align:center;padding:20px 0}
+.profile-name{font-size:20px;font-weight:700;margin-top:12px}
+.profile-club{color:var(--muted);font-size:13px;margin-top:4px}
+.profile-gender{font-size:12px;color:var(--accent);margin-top:2px}
+.fav-btn{background:none;border:none;cursor:pointer;padding:4px;font-size:22px;transition:transform .2s}
+.fav-btn:hover{transform:scale(1.15)}
+.race-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(30,48,84,.3)}
+.race-row:last-child{border-bottom:none}
+.race-icon{flex-shrink:0;width:28px;text-align:center;font-size:18px}
+.race-info{flex:1;min-width:0}
+.race-label{font-size:13px;font-weight:500}
+.race-detail{font-size:12px;color:var(--muted);margin-top:2px}
+.back-btn{display:inline-flex;align-items:center;gap:4px;background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:6px 0;margin-bottom:8px;font-family:inherit}
+.back-btn:hover{color:var(--text)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+.modal{background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:360px;border:1px solid var(--border)}
+.modal h2{font-size:18px;margin-bottom:16px;text-align:center}
+.modal .form-group{margin-bottom:12px}
+.modal label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:500}
+.modal .btn{width:100%;margin-top:8px}
+.modal-close{position:absolute;top:12px;right:12px}
+.modal .switch-link{text-align:center;margin-top:12px;font-size:13px;color:var(--muted)}
+.modal .switch-link a{color:var(--accent);cursor:pointer;text-decoration:none}
+.modal .error{color:var(--accent);font-size:12px;text-align:center;margin-top:8px}
+.schedule-card{padding:16px}
+.schedule-date{font-size:12px;color:var(--gold);font-weight:600;margin-bottom:4px}
+.schedule-name{font-size:16px;font-weight:700;margin-bottom:4px}
+.schedule-loc{font-size:13px;color:var(--muted);margin-bottom:8px}
+.schedule-footer{display:flex;justify-content:space-between;align-items:center}
+.history-toggle{display:flex;gap:0;margin-bottom:16px}
+.history-toggle .btn{border-radius:0;border:1px solid var(--border)}
+.history-toggle .btn:first-child{border-radius:8px 0 0 8px}
+.history-toggle .btn:last-child{border-radius:0 8px 8px 0}
+.history-race{margin-bottom:16px}
+.history-race h3{font-size:14px;font-weight:600;margin-bottom:8px;color:var(--gold)}
+.race-selector{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.race-btn{padding:6px 10px;border-radius:8px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-size:12px;cursor:pointer;font-family:inherit;transition:all .2s;white-space:nowrap}
+.race-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(233,69,96,.1)}
+.gender-counts{font-size:11px;color:var(--muted)}
+.rank-num{font-weight:700;color:var(--gold)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script>
+'use strict';
+const h = React.createElement;
+const {useState, useEffect, useCallback, useRef, createContext, useContext} = React;
+
+const API = '';
+
+// --- Auth Context ---
+const AuthCtx = createContext(null);
+function useAuth(){return useContext(AuthCtx)}
+
+function AuthProvider({children}){
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(()=>localStorage.getItem('wsk_token'));
+
+  useEffect(()=>{
+    if(!token)return void setUser(null);
+    fetch(API+'/api/auth/me',{headers:{'Authorization':'Bearer '+token}})
+      .then(r=>r.ok?r.json():Promise.reject())
+      .then(d=>setUser(d))
+      .catch(()=>{localStorage.removeItem('wsk_token');setToken(null);setUser(null)});
+  },[token]);
+
+  const login=(t,u)=>{localStorage.setItem('wsk_token',t);setToken(t);setUser(u)};
+  const logout=()=>{localStorage.removeItem('wsk_token');setToken(null);setUser(null)};
+
+  return h(AuthCtx.Provider,{value:{user,token,login,logout}},children);
+}
+
+function authHeaders(token){return token?{'Authorization':'Bearer '+token}:{}}
+
+// --- Helpers ---
+function formatTime(s){
+  if(!s||s==='DNF')return 'DNF';
+  if(typeof s==='string'&&s.includes(':'))return s;
+  const sec=parseInt(s);if(isNaN(sec))return s;
+  const hh=Math.floor(sec/3600);const mm=Math.floor((sec%3600)/60);const ss=sec%60;
+  return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0');
+}
+
+function formatDate(d){
+  if(!d)return '';
+  try{const dt=new Date(d);return dt.toLocaleDateString('pl-PL',{day:'numeric',month:'long',year:'numeric'})}
+  catch(e){return d}
+}
+
+// --- SVG Icons ---
+function SearchIcon(){return h('svg',{viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:2},h('circle',{cx:11,cy:11,r:8}),h('line',{x1:21,y1:21,x2:16.65,y2:16.65}))}
+function ResultsIcon(){return h('svg',{viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:2},h('path',{d:'M9 11l3 3L22 4'}),h('path',{d:'M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11'}))}
+function RankingIcon(){return h('svg',{viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:2},h('path',{d:'M12 15l-3 6h6l-3-6z'}),h('path',{d:'M8 2h8l2 5H6L8 2z'}),h('rect',{x:9,y:7,width:6,height:8,rx:1}))}
+function CalendarIcon(){return h('svg',{viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:2},h('rect',{x:3,y:4,width:18,height:18,rx:2}),h('line',{x1:16,y1:2,x2:16,y2:6}),h('line',{x1:8,y1:2,x2:8,y2:6}),h('line',{x1:3,y1:10,x2:21,y2:10}))}
+function HistoryIcon(){return h('svg',{viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:2},h('circle',{cx:12,cy:12,r:10}),h('polyline',{points:'12 6 12 12 16 14'}))}
+function UserIcon(){return h('svg',{viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:2,width:22,height:22},h('path',{d:'M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2'}),h('circle',{cx:12,cy:7,r:4}))}
+function ArrowLeft(){return h('svg',{viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:2,width:16,height:16},h('line',{x1:19,y1:12,x2:5,y2:12}),h('polyline',{points:'12 19 5 12 12 5'}))}
+
+// --- Loading & Error ---
+function Loader(){return h('div',{className:'loader'},h('div',{className:'spinner'}))}
+function ErrorMsg({msg}){return h('div',{className:'error-msg'},msg||'Wystapil blad.')}
+function Empty({msg}){return h('div',{className:'empty'},msg||'Brak danych.')}
+
+// --- Pagination ---
+function Pagination({page,total,perPage,onPage}){
+  const pages=Math.ceil(total/perPage);
+  if(pages<=1)return null;
+  return h('div',{className:'pagination'},
+    h('button',{className:'btn btn-outline btn-sm',disabled:page<=1,onClick:()=>onPage(page-1)},'←'),
+    h('span',{className:'page-info'},page+' / '+pages),
+    h('button',{className:'btn btn-outline btn-sm',disabled:page>=pages,onClick:()=>onPage(page+1)},'→')
+  );
+}
+
+// --- Medal Progress Ring ---
+function MedalProgress({completed,total}){
+  total=total||5;
+  const pct=Math.min(completed/total,1);
+  const r=40,cx=50,cy=50,sw=8;
+  const circ=2*Math.PI*r;
+  const offset=circ*(1-pct);
+  return h('svg',{viewBox:'0 0 100 100',width:100,height:100},
+    h('circle',{cx,cy,r,fill:'none',stroke:'#1e3054',strokeWidth:sw}),
+    h('circle',{cx,cy,r,fill:'none',stroke:pct>=1?'var(--gold)':'var(--accent)',strokeWidth:sw,
+      strokeDasharray:circ,strokeDashoffset:offset,strokeLinecap:'round',
+      transform:'rotate(-90 50 50)',style:{transition:'stroke-dashoffset .6s ease'}}),
+    h('text',{x:50,y:46,textAnchor:'middle',fill:pct>=1?'var(--gold)':'var(--text)',fontSize:22,fontWeight:700},completed+'/'+total),
+    h('text',{x:50,y:62,textAnchor:'middle',fill:'var(--muted)',fontSize:9},'ukonczonych')
+  );
+}
+
+// --- Runner Profile ---
+function RunnerProfile({runnerId,onBack}){
+  const {user,token}=useAuth();
+  const [data,setData]=useState(null);
+  const [loading,setLoading]=useState(true);
+  const [err,setErr]=useState(null);
+  const [races,setRaces]=useState([]);
+  const [fav,setFav]=useState(false);
+  const [favLoading,setFavLoading]=useState(false);
+
+  const load=useCallback(()=>{
+    setLoading(true);
+    Promise.all([
+      fetch(API+'/api/runners/'+runnerId,{headers:authHeaders(token)}).then(r=>r.json()),
+      fetch(API+'/api/races').then(r=>r.json())
+    ]).then(([runner,raceList])=>{
+      setData(runner);setRaces(raceList);setFav(!!runner.is_favorite);setLoading(false);
+    }).catch(e=>{setErr('Nie udalo sie zaladowac profilu.');setLoading(false)});
+  },[runnerId,token]);
+
+  useEffect(()=>{load()},[load]);
+
+  const toggleFav=()=>{
+    if(!token||favLoading)return;
+    setFavLoading(true);
+    const method=fav?'DELETE':'POST';
+    fetch(API+'/api/favorites/'+runnerId,{method,headers:authHeaders(token)})
+      .then(r=>{if(r.ok)setFav(!fav);setFavLoading(false)})
+      .catch(()=>setFavLoading(false));
+  };
+
+  if(loading)return h(Loader);
+  if(err)return h('div',null,h('button',{className:'back-btn',onClick:onBack},h(ArrowLeft),' Wstecz'),h(ErrorMsg,{msg:err}));
+  if(!data)return h(Empty,{msg:'Nie znaleziono zawodnika.'});
+
+  const runnerRaces=data.races||{};
+  const completed=data.completed_races||Object.keys(runnerRaces).length;
+
+  return h('div',null,
+    h('button',{className:'back-btn',onClick:onBack},h(ArrowLeft),' Wstecz'),
+    h('div',{className:'card'},
+      h('div',{className:'profile-header'},
+        h(MedalProgress,{completed,total:5}),
+        h('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',gap:8,marginTop:12}},
+          h('div',{className:'profile-name'},data.name),
+          token?h('button',{className:'fav-btn',onClick:toggleFav,title:fav?'Usun z ulubionych':'Dodaj do ulubionych'},
+            fav?'❤️':'🩶'):null
+        ),
+        data.club?h('div',{className:'profile-club'},data.club):null,
+        data.city?h('div',{className:'profile-club'},data.city):null,
+        data.gender?h('div',{className:'profile-gender'},data.gender==='M'?'Mezczyzna':'Kobieta'):null,
+        data.total_seconds?h('div',{style:{marginTop:8,fontSize:13,color:'var(--muted)'}},
+          'Laczny czas: ',h('strong',{style:{color:'var(--gold)'}},formatTime(data.total_seconds))):null
+      )
+    ),
+    h('div',{className:'card'},
+      h('h3',{style:{fontSize:14,fontWeight:600,marginBottom:12}},'Wyniki biegow'),
+      races.map(race=>{
+        const res=runnerRaces[String(race.id)]||runnerRaces[race.id];
+        const icon=res?(res.time==='DNF'?'❌':'✅'):'❔';
+        const color=res?(res.time==='DNF'?'var(--accent)':'var(--green)'):'var(--muted)';
+        return h('div',{className:'race-row',key:race.id},
+          h('div',{className:'race-icon'},icon),
+          h('div',{className:'race-info'},
+            h('div',{className:'race-label'},race.name),
+            res?h('div',{className:'race-detail'},
+              'Miejsce: ',res.place,' | Czas: ',h('span',{style:{color}},formatTime(res.time)),
+              res.category?' | Kat: '+res.category:''
+            ):h('div',{className:'race-detail'},'Brak wyniku')
+          )
+        );
+      })
+    )
+  );
+}
+
+// --- Search Tab ---
+function SearchTab(){
+  const [q,setQ]=useState('');
+  const [results,setResults]=useState([]);
+  const [loading,setLoading]=useState(false);
+  const [searched,setSearched]=useState(false);
+  const [profile,setProfile]=useState(null);
+  const timer=useRef(null);
+
+  const search=useCallback((query)=>{
+    if(query.length<2){setResults([]);setSearched(false);return}
+    setLoading(true);setSearched(true);
+    fetch(API+'/api/runners/search?q='+encodeURIComponent(query))
+      .then(r=>r.json()).then(d=>{setResults(d);setLoading(false)})
+      .catch(()=>{setResults([]);setLoading(false)});
+  },[]);
+
+  const onChange=(e)=>{
+    const v=e.target.value;setQ(v);
+    clearTimeout(timer.current);
+    timer.current=setTimeout(()=>search(v),400);
+  };
+
+  if(profile)return h(RunnerProfile,{runnerId:profile,onBack:()=>setProfile(null)});
+
+  return h('div',null,
+    h('div',{style:{marginBottom:12}},
+      h('input',{type:'text',placeholder:'Szukaj zawodnika po nazwisku...',value:q,onChange})
+    ),
+    loading?h(Loader):null,
+    !loading&&searched&&results.length===0?h(Empty,{msg:'Nie znaleziono zawodnikow.'}):null,
+    !loading?results.map(r=>
+      h('div',{className:'runner-item',key:r.id,onClick:()=>setProfile(r.id)},
+        h('div',null,
+          h('div',{className:'runner-name'},r.name,r.is_favorite?' ❤️':''),
+          h('div',{className:'runner-meta'},[r.club,r.city,r.gender==='M'?'M':'K'].filter(Boolean).join(' • '))
+        ),
+        h('div',{className:'runner-races'},r.races_count+'/'+(r.total_races||5))
+      )
+    ):null
+  );
+}
+
+// --- Results Tab ---
+function ResultsTab(){
+  const [races,setRaces]=useState([]);
+  const [selRace,setSelRace]=useState(null);
+  const [gender,setGender]=useState('');
+  const [results,setResults]=useState([]);
+  const [counts,setCounts]=useState({total:0,M:0,K:0});
+  const [total,setTotal]=useState(0);
+  const [page,setPage]=useState(1);
+  const [loading,setLoading]=useState(true);
+  const [loadingResults,setLoadingResults]=useState(false);
+  const perPage=50;
+
+  useEffect(()=>{
+    fetch(API+'/api/races').then(r=>r.json()).then(d=>{
+      setRaces(d);
+      const done=d.filter(r=>r.has_results);
+      if(done.length>0)setSelRace(done[0].id);
+      setLoading(false);
+    }).catch(()=>setLoading(false));
+  },[]);
+
+  useEffect(()=>{
+    if(!selRace)return;
+    setLoadingResults(true);
+    let url=API+'/api/results/'+selRace+'?page='+page+'&per_page='+perPage;
+    if(gender)url+='&gender='+gender;
+    fetch(url).then(r=>r.json()).then(d=>{
+      setResults(d.results||[]);
+      setCounts(d.counts||{total:0,M:0,K:0});
+      setTotal(d.total||0);
+      setLoadingResults(false);
+    }).catch(()=>{setResults([]);setLoadingResults(false)});
+  },[selRace,gender,page]);
+
+  const onGender=(g)=>{setGender(g===gender?'':g);setPage(1)};
+  const onRace=(id)=>{setSelRace(id);setPage(1);setGender('')};
+
+  if(loading)return h(Loader);
+
+  const doneRaces=races.filter(r=>r.has_results);
+  if(doneRaces.length===0)return h(Empty,{msg:'Brak dostepnych wynikow.'});
+
+  return h('div',null,
+    h('div',{className:'race-selector'},
+      doneRaces.map(r=>h('button',{key:r.id,className:'race-btn'+(selRace===r.id?' active':''),onClick:()=>onRace(r.id)},r.name))
+    ),
+    h('div',{className:'filter-row'},
+      h('button',{className:'btn btn-outline btn-sm'+(gender===''?' active':''),onClick:()=>{setGender('');setPage(1)}},
+        'Wszyscy',h('span',{className:'gender-counts'},' ('+counts.total+')')),
+      h('button',{className:'btn btn-outline btn-sm'+(gender==='M'?' active':''),onClick:()=>onGender('M')},
+        'Mezczyzni',h('span',{className:'gender-counts'},' ('+counts.M+')')),
+      h('button',{className:'btn btn-outline btn-sm'+(gender==='K'?' active':''),onClick:()=>onGender('K')},
+        'Kobiety',h('span',{className:'gender-counts'},' ('+counts.K+')'))
+    ),
+    loadingResults?h(Loader):h('div',null,
+      h('div',{style:{overflowX:'auto'}},
+        h('table',null,
+          h('thead',null,h('tr',null,
+            h('th',null,'#'),h('th',null,'Nazwisko'),h('th',null,'Klub'),h('th',null,'Kat.'),h('th',null,'Czas')
+          )),
+          h('tbody',null,results.map((r,i)=>
+            h('tr',{key:i},
+              h('td',null,r.place),
+              h('td',{style:{fontWeight:500}},r.name),
+              h('td',{style:{color:'var(--muted)',fontSize:12}},r.club||''),
+              h('td',{style:{fontSize:12}},r.category||''),
+              h('td',{style:{color:r.time==='DNF'?'var(--accent)':'var(--green)',fontWeight:600,fontFamily:'monospace'}},formatTime(r.time))
+            )
+          ))
+        )
+      ),
+      h(Pagination,{page,total,perPage,onPage:setPage})
+    )
+  );
+}
+
+// --- Ranking Tab ---
+function RankingTab(){
+  const [gender,setGender]=useState('');
+  const [minRaces,setMinRaces]=useState(1);
+  const [entries,setEntries]=useState([]);
+  const [total,setTotal]=useState(0);
+  const [page,setPage]=useState(1);
+  const [loading,setLoading]=useState(true);
+  const [profile,setProfile]=useState(null);
+  const perPage=50;
+
+  useEffect(()=>{
+    setLoading(true);
+    let url=API+'/api/ranking?page='+page+'&per_page='+perPage+'&min_races='+minRaces;
+    if(gender)url+='&gender='+gender;
+    fetch(url).then(r=>r.json()).then(d=>{
+      setEntries(d.entries||[]);setTotal(d.total||0);setLoading(false);
+    }).catch(()=>{setEntries([]);setLoading(false)});
+  },[gender,minRaces,page]);
+
+  if(profile)return h(RunnerProfile,{runnerId:profile,onBack:()=>setProfile(null)});
+
+  return h('div',null,
+    h('div',{className:'filter-row'},
+      h('button',{className:'btn btn-outline btn-sm'+(gender===''?' active':''),onClick:()=>{setGender('');setPage(1)}},'Wszyscy'),
+      h('button',{className:'btn btn-outline btn-sm'+(gender==='M'?' active':''),onClick:()=>{setGender('M');setPage(1)}},'Mezczyzni'),
+      h('button',{className:'btn btn-outline btn-sm'+(gender==='K'?' active':''),onClick:()=>{setGender('K');setPage(1)}},'Kobiety')
+    ),
+    h('div',{className:'filter-row'},
+      h('span',{style:{fontSize:12,color:'var(--muted)',lineHeight:'30px'}},'Min. biegow: '),
+      [1,2,3,4,5].map(n=>h('button',{key:n,className:'btn btn-outline btn-sm'+(minRaces===n?' active':''),
+        onClick:()=>{setMinRaces(n);setPage(1)}},n))
+    ),
+    loading?h(Loader):h('div',null,
+      h('div',{style:{overflowX:'auto'}},
+        h('table',null,
+          h('thead',null,h('tr',null,
+            h('th',null,'#'),h('th',null,'Nazwisko'),h('th',null,'Klub'),h('th',null,'Biegi'),h('th',null,'Laczny czas')
+          )),
+          h('tbody',null,entries.map((e,i)=>
+            h('tr',{key:i,style:{cursor:'pointer'},onClick:()=>setProfile(e.runner_id)},
+              h('td',null,h('span',{className:'rank-num'},e.rank)),
+              h('td',{style:{fontWeight:500}},e.name),
+              h('td',{style:{color:'var(--muted)',fontSize:12}},e.club||''),
+              h('td',null,h('span',{style:{color:'var(--gold)',fontWeight:600}},e.race_count)),
+              h('td',{style:{fontFamily:'monospace',color:'var(--green)'}},formatTime(e.total_time))
+            )
+          ))
+        )
+      ),
+      h(Pagination,{page,total,perPage,onPage:setPage})
+    )
+  );
+}
+
+// --- Schedule Tab ---
+function ScheduleTab(){
+  const [races,setRaces]=useState([]);
+  const [loading,setLoading]=useState(true);
+
+  useEffect(()=>{
+    fetch(API+'/api/races').then(r=>r.json()).then(d=>{setRaces(d);setLoading(false)})
+      .catch(()=>setLoading(false));
+  },[]);
+
+  const downloadICS=(race)=>{
+    const dt=race.date?race.date.replace(/-/g,''):'20260101';
+    const ics=[
+      'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//WSK Tracker//PL',
+      'BEGIN:VEVENT',
+      'DTSTART;VALUE=DATE:'+dt,
+      'SUMMARY:'+race.name,
+      'LOCATION:'+(race.loc||''),
+      'DESCRIPTION:Wielki Szlem Komandosa - '+(race.dist||'')+' km',
+      'END:VEVENT','END:VCALENDAR'
+    ].join('\r\n');
+    const blob=new Blob([ics],{type:'text/calendar'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=(race.name||'bieg').replace(/\s+/g,'_')+'.ics';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  if(loading)return h(Loader);
+
+  return h('div',null,
+    races.map(race=>
+      h('div',{className:'card schedule-card',key:race.id},
+        h('div',{className:'schedule-date'},formatDate(race.date)),
+        h('div',{className:'schedule-name'},race.name),
+        h('div',{className:'schedule-loc'},race.loc||'',(race.dist?' • '+race.dist+' km':'')),
+        h('div',{className:'schedule-footer'},
+          race.has_results
+            ?h('span',{className:'badge badge-done'},'Zakonczony')
+            :h('span',{className:'badge badge-upcoming'},'Nadchodzacy'),
+          !race.has_results?h('button',{className:'btn btn-outline btn-sm',onClick:()=>downloadICS(race)},
+            h(CalendarIcon),' Dodaj do kalendarza'):null
+        )
+      )
+    )
+  );
+}
+
+// --- History Tab ---
+function HistoryTab(){
+  const [gender,setGender]=useState('M');
+  const [data,setData]=useState(null);
+  const [loading,setLoading]=useState(true);
+
+  useEffect(()=>{
+    setLoading(true);
+    fetch(API+'/api/history?gender='+gender).then(r=>r.json())
+      .then(d=>{setData(d);setLoading(false)})
+      .catch(()=>{setData(null);setLoading(false)});
+  },[gender]);
+
+  return h('div',null,
+    h('div',{className:'history-toggle'},
+      h('button',{className:'btn btn-outline'+(gender==='M'?' active':''),onClick:()=>setGender('M')},'Mezczyzni'),
+      h('button',{className:'btn btn-outline'+(gender==='K'?' active':''),onClick:()=>setGender('K')},'Kobiety')
+    ),
+    loading?h(Loader):
+    !data?h(Empty,{msg:'Brak danych historycznych.'}):
+    Object.entries(data).map(([raceName,entries])=>
+      h('div',{className:'history-race card',key:raceName},
+        h('h3',null,raceName),
+        h('table',null,
+          h('thead',null,h('tr',null,h('th',null,'Rok'),h('th',null,'Zwyciezca'),h('th',null,'Czas'))),
+          h('tbody',null,(entries||[]).map((e,i)=>
+            h('tr',{key:i},
+              h('td',{style:{fontWeight:600}},e.year),
+              h('td',null,e.name),
+              h('td',{style:{fontFamily:'monospace',color:'var(--green)'}},formatTime(e.time))
+            )
+          ))
+        )
+      )
+    )
+  );
+}
+
+// --- Auth Modal ---
+function AuthModal({onClose}){
+  const {login}=useAuth();
+  const [mode,setMode]=useState('login');
+  const [email,setEmail]=useState('');
+  const [username,setUsername]=useState('');
+  const [password,setPassword]=useState('');
+  const [error,setError]=useState('');
+  const [loading,setLoading]=useState(false);
+
+  const submit=(e)=>{
+    e.preventDefault();setError('');setLoading(true);
+    const url=mode==='login'?API+'/api/auth/login':API+'/api/auth/register';
+    const body=mode==='login'?{email,password}:{email,username,password};
+    fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      .then(r=>r.json().then(d=>({ok:r.ok,data:d})))
+      .then(({ok,data})=>{
+        if(!ok)throw new Error(data.detail||'Blad logowania');
+        login(data.token,{username:data.username,email});
+        onClose();
+      })
+      .catch(e=>{setError(e.message);setLoading(false)});
+  };
+
+  return h('div',{className:'modal-overlay',onClick:(e)=>{if(e.target===e.currentTarget)onClose()}},
+    h('div',{className:'modal'},
+      h('h2',null,mode==='login'?'Logowanie':'Rejestracja'),
+      h('form',{onSubmit:submit},
+        h('div',{className:'form-group'},
+          h('label',null,'Email'),
+          h('input',{type:'email',value:email,onChange:e=>setEmail(e.target.value),required:true})
+        ),
+        mode==='register'?h('div',{className:'form-group'},
+          h('label',null,'Nazwa uzytkownika'),
+          h('input',{type:'text',value:username,onChange:e=>setUsername(e.target.value),required:true})
+        ):null,
+        h('div',{className:'form-group'},
+          h('label',null,'Haslo'),
+          h('input',{type:'password',value:password,onChange:e=>setPassword(e.target.value),required:true})
+        ),
+        h('button',{className:'btn btn-accent',type:'submit',disabled:loading},loading?'Ladowanie...':mode==='login'?'Zaloguj sie':'Zarejestruj sie'),
+        error?h('div',{className:'error'},error):null,
+        h('div',{className:'switch-link'},
+          mode==='login'
+            ?h('span',null,'Nie masz konta? ',h('a',{onClick:()=>{setMode('register');setError('')}},'Zarejestruj sie'))
+            :h('span',null,'Masz konto? ',h('a',{onClick:()=>{setMode('login');setError('')}},'Zaloguj sie'))
+        )
+      )
+    )
+  );
+}
+
+// --- App ---
+const TABS=[
+  {id:'search',label:'Szukaj',icon:SearchIcon},
+  {id:'results',label:'Wyniki',icon:ResultsIcon},
+  {id:'ranking',label:'Ranking',icon:RankingIcon},
+  {id:'schedule',label:'Kalendarz',icon:CalendarIcon},
+  {id:'history',label:'Historia',icon:HistoryIcon},
+];
+
+function App(){
+  const [tab,setTab]=useState('search');
+  const [showAuth,setShowAuth]=useState(false);
+  const {user,logout}=useAuth();
+
+  const content={
+    search:h(SearchTab),
+    results:h(ResultsTab),
+    ranking:h(RankingTab),
+    schedule:h(ScheduleTab),
+    history:h(HistoryTab),
+  };
+
+  return h('div',{id:'app-root'},
+    h('div',{className:'header'},
+      h('h1',null,'WSK ',h('span',null,'Tracker')),
+      h('div',{className:'header-right'},
+        user?h('span',{className:'user-badge'},user.username):null,
+        user
+          ?h('button',{className:'icon-btn',onClick:logout,title:'Wyloguj'},
+            h('svg',{viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:2,width:22,height:22},
+              h('path',{d:'M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4'}),
+              h('polyline',{points:'16 17 21 12 16 7'}),
+              h('line',{x1:21,y1:12,x2:9,y2:12})))
+          :h('button',{className:'icon-btn',onClick:()=>setShowAuth(true),title:'Zaloguj sie'},h(UserIcon))
+      )
+    ),
+    h('div',{className:'tabs'},
+      TABS.map(t=>h('button',{key:t.id,className:'tab'+(tab===t.id?' active':''),onClick:()=>setTab(t.id)},
+        h(t.icon),t.label
+      ))
+    ),
+    h('div',{className:'content'},content[tab]),
+    showAuth?h(AuthModal,{onClose:()=>setShowAuth(false)}):null
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  h(AuthProvider,null,h(App))
+);
+</script>
+</body>
+</html>

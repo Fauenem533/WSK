@@ -238,6 +238,8 @@ async def scrape_race(race_id: str, db: Session) -> int:
             existing.time_str = time_str
             existing.time_seconds = time_to_seconds(time_str)
         else:
+            db.flush()
+
             db.add(Result(
                 runner_id=runner.id,
                 race_id=race_id,

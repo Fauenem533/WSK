@@ -1,6 +1,6 @@
 import asyncio
 import logging
-
+logging.basicConfig(level=logging.INFO)
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
 from fastapi.staticfiles import StaticFiles

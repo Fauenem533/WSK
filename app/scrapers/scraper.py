@@ -187,6 +187,9 @@ async def scrape_race(race_id: str, db: Session) -> int:
     url = cfg["source_url"]
     source_type = cfg["source_type"]
 
+    logger.info(f"SCRAPE START race_id={race_id}, url={url}, source_type={source_type}")
+
+
     try:
         if source_type == "html":
             raw = await scrape_b4sport(url)
@@ -196,6 +199,8 @@ async def scrape_race(race_id: str, db: Session) -> int:
             raw = await scrape_zmierzymyczas_pdf(url)
         else:
             return 0
+
+        logger.info(f"SCRAPE RAW race_id={race_id}, rows={len(raw)}")
     except Exception as e:
         logger.error(f"Scrape error for {race_id}: {e}")
         db.add(ScrapeLog(race_id=race_id, status="error", message=str(e)))

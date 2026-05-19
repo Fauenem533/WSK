@@ -208,62 +208,78 @@ async def scrape_race(race_id: str, db: Session) -> int:
         raise
 
     # Upsert runners and results
-    count = 0
-    for place, name, club, city, cat, gender, time_str in raw:
-        norm_name = normalize(name)
+count = 0
+seen_results = set()
 
-        runner = db.query(Runner).filter(Runner.name_normalized == norm_name).first()
-        if not runner:
-            runner = Runner(
-                name=name, name_normalized=norm_name,
-                gender=gender, club=club, city=city,
-            )
-            db.add(runner)
-            db.flush()
-        else:
-            if gender == "K":
-                runner.gender = "K"
-            if club and not runner.club:
-                runner.club = club
-            if city and not runner.city:
-                runner.city = city
+for place, name, club, city, cat, gender, time_str in raw:
+    norm_name = normalize(name)
 
-        existing = db.query(Result).filter(
-            Result.runner_id == runner.id, Result.race_id == race_id
-        ).first()
+    # Skip duplicate entries inside same race
+    unique_key = (race_id, norm_name)
 
-        if existing:
-            existing.place = place
-            existing.category = cat
-            existing.time_str = time_str
-            existing.time_seconds = time_to_seconds(time_str)
-        else:
-            db.flush()
+    if unique_key in seen_results:
+        logger.warning(
+            f"Duplicate result skipped race_id={race_id}, "
+            f"name={name}, place={place}"
+        )
+        continue
 
-            db.add(Result(
-                runner_id=runner.id,
-                race_id=race_id,
-                place=place,
-                category=cat,
-                time_str=time_str,
-                time_seconds=time_to_seconds(time_str),
-            ))
-        count += 1
+    seen_results.add(unique_key)
 
-    db.add(ScrapeLog(race_id=race_id, status="success", runners_count=count))
-    db.commit()
-    logger.info(f"Scraped {race_id}: {count} runners")
-    return count
+    runner = db.query(Runner).filter(
+        Runner.name_normalized == norm_name
+    ).first()
 
+    if not runner:
+        runner = Runner(
+            name=name,
+            name_normalized=norm_name,
+            gender=gender,
+            club=club,
+            city=city,
+        )
+        db.add(runner)
+        db.flush()
 
-async def scrape_all(db: Session) -> dict:
-    """Scrape all races with available sources."""
-    results = {}
-    for race_id, cfg in RACE_SOURCES.items():
-        if cfg["source_url"]:
-            try:
-                count = await scrape_race(race_id, db)
-                results[race_id] = {"status": "ok", "count": count}
-            except Exception as e:
-                results[race_id] = {"status": "error", "message": str(e)}
-    return results
+    else:
+        if gender == "K":
+            runner.gender = "K"
+
+        if club and not runner.club:
+            runner.club = club
+
+        if city and not runner.city:
+            runner.city = city
+
+    existing = db.query(Result).filter(
+        Result.runner_id == runner.id,
+        Result.race_id == race_id
+    ).first()
+
+    if existing:
+        existing.place = place
+        existing.category = cat
+        existing.time_str = time_str
+        existing.time_seconds = time_to_seconds(time_str)
+
+    else:
+        db.add(Result(
+            runner_id=runner.id,
+            race_id=race_id,
+            place=place,
+            category=cat,
+            time_str=time_str,
+            time_seconds=time_to_seconds(time_str),
+        ))
+
+    count += 1
+
+db.add(ScrapeLog(
+    race_id=race_id,
+    status="success",
+    runners_count=count
+))
+
+db.commit()
+
+logger.info(f"Scraped {race_id}: {count} runners")

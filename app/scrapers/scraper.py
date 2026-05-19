@@ -97,7 +97,14 @@ async def scrape_b4sport(url: str) -> List[Tuple]:
 
 async def scrape_maratonczyk_pdf(url: str) -> List[Tuple]:
     async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
-        resp = await client.get(url)
+        resp = await client.get(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+                "Accept": "application/pdf,text/html,*/*",
+                "Referer": "https://www.maratonczyk.pl/"
+            }
+        )
         resp.raise_for_status()
 
     runners = []

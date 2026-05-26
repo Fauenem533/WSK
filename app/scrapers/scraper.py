@@ -19,6 +19,12 @@ from app.config import RACE_SOURCES
 
 logger = logging.getLogger(__name__)
 
+# Some race sites block requests without a real-looking User-Agent
+HTTP_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+}
+
 FEMALE_NAMES = {
     "Agata", "Agnieszka", "Aleksandra", "Alicja", "Alina", "Amelia", "Aneta",
     "Angelika", "Anita", "Anna", "Barbara", "Beata", "Bernadeta", "Bożena",
@@ -70,7 +76,7 @@ def detect_gender_by_name(name: str) -> str:
 
 async def scrape_b4sport(url: str) -> List[Tuple]:
     """Returns list of (place, name, club, city, category, gender, time)"""
-    async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+    async with httpx.AsyncClient(timeout=60, follow_redirects=True, headers=HTTP_HEADERS) as client:
         resp = await client.get(url)
         resp.raise_for_status()
 
@@ -97,7 +103,7 @@ async def scrape_b4sport(url: str) -> List[Tuple]:
 
 async def scrape_maratonczyk_pdf(url: str) -> List[Tuple]:
     """Parse maratonczyk.pl PDF results."""
-    async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
+    async with httpx.AsyncClient(timeout=60, follow_redirects=True, headers=HTTP_HEADERS) as client:
         resp = await client.get(url)
         resp.raise_for_status()
 
@@ -138,7 +144,7 @@ async def scrape_maratonczyk_pdf(url: str) -> List[Tuple]:
 
 async def scrape_zmierzymyczas_pdf(url: str) -> List[Tuple]:
     """Parse zmierzymyczas.pl PDF results (Setka format: no gender column)."""
-    async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
+    async with httpx.AsyncClient(timeout=60, follow_redirects=True, headers=HTTP_HEADERS) as client:
         resp = await client.get(url)
         resp.raise_for_status()
 
@@ -188,6 +194,7 @@ async def scrape_race(race_id: str, db: Session) -> int:
     source_type = cfg["source_type"]
 
     try:
+        logger.info(f"Scraping {race_id} from {url} (type={source_type})")
         if source_type == "html":
             raw = await scrape_b4sport(url)
         elif source_type == "pdf" and "maratonczyk" in url:
@@ -196,9 +203,10 @@ async def scrape_race(race_id: str, db: Session) -> int:
             raw = await scrape_zmierzymyczas_pdf(url)
         else:
             return 0
+        logger.info(f"Parsed {len(raw)} runners from {race_id}")
     except Exception as e:
-        logger.error(f"Scrape error for {race_id}: {e}")
-        db.add(ScrapeLog(race_id=race_id, status="error", message=str(e)))
+        logger.error(f"Scrape error for {race_id}: {e}", exc_info=True)
+        db.add(ScrapeLog(race_id=race_id, status="error", message=str(e)[:500]))
         db.commit()
         raise
 

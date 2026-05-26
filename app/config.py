@@ -1,12 +1,18 @@
 import os
 from datetime import timedelta
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./wsk.db")
+# Railway sets DATABASE_URL; fix postgres:// -> postgresql:// for SQLAlchemy 2.x
+_raw_db_url = os.getenv("DATABASE_URL", "sqlite:///./wsk.db")
+if _raw_db_url.startswith("postgres://"):
+    _raw_db_url = _raw_db_url.replace("postgres://", "postgresql://", 1)
+DATABASE_URL = _raw_db_url
+
 SECRET_KEY = os.getenv("SECRET_KEY", "wsk-dev-secret-change-in-production-2026")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE = timedelta(days=30)
 
 SCRAPE_INTERVAL_HOURS = int(os.getenv("SCRAPE_INTERVAL_HOURS", "6"))
+PORT = int(os.getenv("PORT", "8000"))
 
 RACE_SOURCES = {
     "pol": {
@@ -34,8 +40,8 @@ RACE_SOURCES = {
         "source_url": "https://wyniki.b4sport.pl/12-cwiercmaraton-komandosa/e7316.html",
     },
     "bonk": {
-        "name": "BONK Komandosa",
-        "dist": "50 km",
+        "name": "Bieg o Nóż Komandosa",
+        "dist": "10 km",
         "date": "2026-10-10",
         "loc": "Lubliniec",
         "source_type": None,
@@ -43,7 +49,7 @@ RACE_SOURCES = {
     },
     "mar": {
         "name": "Maraton Komandosa",
-        "dist": "42.2 km",
+        "dist": "42.195 km",
         "date": "2026-11-28",
         "loc": "Lubliniec",
         "source_type": None,

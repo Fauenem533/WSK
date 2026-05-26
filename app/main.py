@@ -1,8 +1,10 @@
 import asyncio
 import logging
+import os
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -16,6 +18,7 @@ from app.config import SCRAPE_INTERVAL_HOURS
 from app.auth import require_user
 from app.models import User, ScrapeLog
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
 scheduler = AsyncIOScheduler()
 
@@ -28,7 +31,7 @@ async def scheduled_scrape():
         results = await scrape_all(db)
         logger.info(f"Scrape complete: {results}")
     except Exception as e:
-        logger.error(f"Scheduled scrape failed: {e}")
+        logger.error(f"Scheduled scrape failed: {e}", exc_info=True)
     finally:
         db.close()
 
@@ -72,17 +75,33 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# CORS - allow all origins (frontend served from same domain, but just in case)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Routers
 app.include_router(auth_router)
 app.include_router(races_router)
 
 # Static files (frontend)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
+if os.path.isdir(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+elif os.path.isdir("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 @app.get("/")
 async def index():
-    return FileResponse("static/index.html")
+    for path in [os.path.join(static_dir, "index.html"), "static/index.html"]:
+        if os.path.isfile(path):
+            return FileResponse(path)
+    return {"message": "WSK Tracker API is running. Frontend not found."}
 
 
 # Admin endpoint: trigger manual scrape

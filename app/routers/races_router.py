@@ -22,7 +22,12 @@ def normalize(s: str) -> str:
 # --- Races metadata ---
 
 @router.get("/races")
-def list_races():
+def list_races(db: Session = Depends(get_db)):
+    # Check actual DB for results instead of just source_url
+    race_counts = {}
+    for row in db.query(Result.race_id, func.count(Result.id)).group_by(Result.race_id).all():
+        race_counts[row[0]] = row[1]
+
     return [
         {
             "id": rid,
@@ -30,7 +35,7 @@ def list_races():
             "dist": r["dist"],
             "date": r["date"],
             "loc": r["loc"],
-            "has_results": r["source_url"] is not None,
+            "has_results": race_counts.get(rid, 0) > 0,
         }
         for rid, r in RACE_SOURCES.items()
     ]
@@ -84,7 +89,7 @@ def get_results(
 
 @router.get("/runners/search")
 def search_runners(
-    q: str = Query(..., min_length=3),
+    q: str = Query(..., min_length=2),
     db: Session = Depends(get_db),
     user: Optional[User] = Depends(get_current_user),
 ):

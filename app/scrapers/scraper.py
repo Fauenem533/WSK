@@ -6,7 +6,6 @@ import io
 import re
 import logging
 import unicodedata
-from datetime import datetime, timezone
 from typing import List, Tuple
 
 import httpx
@@ -44,35 +43,35 @@ FEMALE_NAMES = {
 
 def normalize(s: str) -> str:
     return "".join(
-        c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn"
+        c for c in unicodedata.normalize("NFD", s)
+        if unicodedata.category(c) != "Mn"
     ).lower()
 
 
 def time_to_seconds(t: str) -> float | None:
     if not t or t == "DNF":
         return None
-    # Remove fractional seconds for uniform format
-    t = re.sub(r'\.\d+$', '', t)
+
+    t = re.sub(r"\.\d+$", "", t)
     parts = t.split(":")
+
     try:
         if len(parts) == 3:
             return int(parts[0]) * 3600 + int(parts[1]) * 60 + float(parts[2])
-        elif len(parts) == 2:
+        if len(parts) == 2:
             return int(parts[0]) * 60 + float(parts[1])
     except ValueError:
         return None
+
     return None
 
 
 def detect_gender_by_name(name: str) -> str:
-    """Detect gender from Polish first name."""
     parts = name.split()
     first_name = parts[1] if len(parts) > 1 else parts[0]
     first_name = first_name.capitalize()
     return "K" if first_name in FEMALE_NAMES else "M"
 
-
-# --- B4Sport HTML parser (Ćwierćmaraton) ---
 
 async def scrape_b4sport(url: str) -> List[Tuple]:
     """Returns list of (place, name, club, city, category, gender, time)"""
@@ -86,6 +85,7 @@ async def scrape_b4sport(url: str) -> List[Tuple]:
 
     for tr in rows:
         cells = [td.get_text(strip=True) for td in tr.select("td")]
+
         if len(cells) >= 11 and re.match(r"^\d+$", cells[0]):
             place = int(cells[0])
             name = cells[1]
@@ -93,21 +93,24 @@ async def scrape_b4sport(url: str) -> List[Tuple]:
             city = cells[4]
             cat = cells[6]
             time = cells[10] or "DNF"
-            gender = "K" if cat.startswith("K") or (len(cells) > 8 and cells[8].startswith("K")) else "M"
+            gender = "K" if cat.startswith("K") or (
+                len(cells) > 8 and cells[8].startswith("K")
+            ) else "M"
+
             runners.append((place, name, club, city, cat, gender, time))
 
     return runners
 
 
-# --- Maratonczyk PDF parser (Półmaraton) ---
-
 async def scrape_maratonczyk_pdf(url: str) -> List[Tuple]:
     """Parse maratonczyk.pl PDF results."""
-    async with httpx.AsyncClient(timeout=60, follow_redirects=True, headers=HTTP_HEADERS) as client:
+    headers = {**HTTP_HEADERS, "Referer": "https://www.maratonczyk.pl/", "Accept": "application/pdf,text/html,*/*"}
+    async with httpx.AsyncClient(timeout=60, follow_redirects=True, headers=headers) as client:
         resp = await client.get(url)
         resp.raise_for_status()
 
     runners = []
+
     with pdfplumber.open(io.BytesIO(resp.content)) as pdf:
         text = ""
         for page in pdf.pages:
@@ -129,6 +132,7 @@ async def scrape_maratonczyk_pdf(url: str) -> List[Tuple]:
 
         club, city = "", ""
         parts = club_city.split(",")
+
         if len(parts) >= 2:
             club = ",".join(parts[:-1]).strip()
             city = parts[-1].strip()
@@ -140,8 +144,6 @@ async def scrape_maratonczyk_pdf(url: str) -> List[Tuple]:
     return runners
 
 
-# --- ZmierzymyCzas PDF parser (Setka) ---
-
 async def scrape_zmierzymyczas_pdf(url: str) -> List[Tuple]:
     """Parse zmierzymyczas.pl PDF results (Setka format: no gender column)."""
     async with httpx.AsyncClient(timeout=60, follow_redirects=True, headers=HTTP_HEADERS) as client:
@@ -149,6 +151,7 @@ async def scrape_zmierzymyczas_pdf(url: str) -> List[Tuple]:
         resp.raise_for_status()
 
     runners = []
+
     with pdfplumber.open(io.BytesIO(resp.content)) as pdf:
         text = ""
         for page in pdf.pages:
@@ -171,6 +174,7 @@ async def scrape_zmierzymyczas_pdf(url: str) -> List[Tuple]:
 
         club, city = "", ""
         parts = club_city.split(",")
+
         if len(parts) >= 2:
             club = ",".join(parts[:-1]).strip()
             city = parts[-1].strip()
@@ -182,16 +186,16 @@ async def scrape_zmierzymyczas_pdf(url: str) -> List[Tuple]:
     return runners
 
 
-# --- Main scrape orchestrator ---
-
 async def scrape_race(race_id: str, db: Session) -> int:
-    """Scrape a single race and upsert results. Returns runner count."""
     cfg = RACE_SOURCES.get(race_id)
+
     if not cfg or not cfg["source_url"]:
         return 0
 
     url = cfg["source_url"]
     source_type = cfg["source_type"]
+
+    logger.info(f"SCRAPE START race_id={race_id}, url={url}, source_type={source_type}")
 
     try:
         logger.info(f"Scraping {race_id} from {url} (type={source_type})")
@@ -210,29 +214,49 @@ async def scrape_race(race_id: str, db: Session) -> int:
         db.commit()
         raise
 
-    # Upsert runners and results
     count = 0
+    seen_results = set()
+
     for place, name, club, city, cat, gender, time_str in raw:
         norm_name = normalize(name)
+        unique_key = (race_id, norm_name)
 
-        runner = db.query(Runner).filter(Runner.name_normalized == norm_name).first()
+        if unique_key in seen_results:
+            logger.warning(
+                f"Duplicate result skipped race_id={race_id}, "
+                f"name={name}, place={place}"
+            )
+            continue
+
+        seen_results.add(unique_key)
+
+        runner = db.query(Runner).filter(
+            Runner.name_normalized == norm_name
+        ).first()
+
         if not runner:
             runner = Runner(
-                name=name, name_normalized=norm_name,
-                gender=gender, club=club, city=city,
+                name=name,
+                name_normalized=norm_name,
+                gender=gender,
+                club=club,
+                city=city,
             )
             db.add(runner)
             db.flush()
         else:
             if gender == "K":
                 runner.gender = "K"
+
             if club and not runner.club:
                 runner.club = club
+
             if city and not runner.city:
                 runner.city = city
 
         existing = db.query(Result).filter(
-            Result.runner_id == runner.id, Result.race_id == race_id
+            Result.runner_id == runner.id,
+            Result.race_id == race_id
         ).first()
 
         if existing:
@@ -249,22 +273,38 @@ async def scrape_race(race_id: str, db: Session) -> int:
                 time_str=time_str,
                 time_seconds=time_to_seconds(time_str),
             ))
+
         count += 1
 
-    db.add(ScrapeLog(race_id=race_id, status="success", runners_count=count))
+    db.add(ScrapeLog(
+        race_id=race_id,
+        status="success",
+        runners_count=count
+    ))
+
     db.commit()
+
     logger.info(f"Scraped {race_id}: {count} runners")
+
     return count
 
 
 async def scrape_all(db: Session) -> dict:
-    """Scrape all races with available sources."""
     results = {}
+
     for race_id, cfg in RACE_SOURCES.items():
         if cfg["source_url"]:
             try:
                 count = await scrape_race(race_id, db)
-                results[race_id] = {"status": "ok", "count": count}
+                results[race_id] = {
+                    "status": "ok",
+                    "count": count
+                }
             except Exception as e:
-                results[race_id] = {"status": "error", "message": str(e)}
+                db.rollback()
+                results[race_id] = {
+                    "status": "error",
+                    "message": str(e)
+                }
+
     return results
